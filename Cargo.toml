@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+  "core",
+  "agent",
+  "cli-rs",
+  "daemon",
+  "desktop/src-tauri",
+]

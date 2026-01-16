@@ -1,0 +1,29 @@
+# Build artifacts
+/target/
+desktop/dist/
+desktop/src-tauri/target/
+
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.mcp.json
+
+# Temporary files
+*.log
+*.tmp
+
+# Design docs (temporary)
+architecture-proposal.md
+design-audit.md
+desktop/references/
