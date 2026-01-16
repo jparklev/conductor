@@ -482,7 +482,12 @@ impl Conductor for ConductorService {
             }
             "codex" => (
                 "codex",
-                vec!["--full-auto".to_string(), req.prompt.clone()],
+                vec![
+                    "exec".to_string(),
+                    "--full-auto".to_string(),
+                    "--json".to_string(),
+                    req.prompt.clone(),
+                ],
             ),
             "gemini" => (
                 "gemini",
