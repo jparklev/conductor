@@ -970,7 +970,7 @@ function App() {
   const tabStore = useRef(new Map<string, AgentTab[]>());
   const tabIdCounter = useRef(1);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-  const agentSessionRef = useRef<{ wsId: string; tabId: string; sessionId: string } | null>(null);
+  const agentSessionRef = useRef<{ wsId: string; tabId: string; sessionId: string; startTime: number } | null>(null);
   const repoUrlInputRef = useRef<HTMLInputElement | null>(null);
 
   // Derived state
@@ -1237,7 +1237,7 @@ function App() {
     }
 
     const sessionId = `${activeWorkspaceId}-${activeTabId}-${Date.now()}`;
-    agentSessionRef.current = { wsId: activeWorkspaceId, tabId: activeTabId, sessionId };
+    agentSessionRef.current = { wsId: activeWorkspaceId, tabId: activeTabId, sessionId, startTime: Date.now() };
 
     try {
       await invoke("run_agent", {
@@ -1305,7 +1305,15 @@ function App() {
   useEffect(() => {
     if (!activeWorkspaceId) { setAgentTabs([]); setActiveTabId(null); return; }
     const stored = tabStore.current.get(activeWorkspaceId);
-    if (stored && stored.length > 0) { setAgentTabs(stored); setActiveTabId(stored[0].id); return; }
+    if (stored && stored.length > 0) {
+      setAgentTabs(stored);
+      // Preserve active tab if it belongs to this workspace
+      const isActiveInStored = activeTabId && stored.some((t) => t.id === activeTabId);
+      if (!isActiveInStored) {
+        setActiveTabId(stored[0].id);
+      }
+      return;
+    }
     // Create new tab with saved resumeId and restored chat history
     const initialTab = createNewTab();
     if (sessionState?.resume_id) {
@@ -1355,7 +1363,10 @@ function App() {
         }
         // Play notification sound only on final session end (not agent.completed which may come first)
         if (agentEvent.type === "session_ended") {
-          playNotificationSound();
+          // Avoid ringing for immediate failures (e.g. missing binary)
+          if (Date.now() - session.startTime > 1000) {
+            playNotificationSound();
+          }
         }
 
         setAgentTabs((prev) => {
