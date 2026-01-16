@@ -1124,6 +1124,51 @@ body {
   font-weight: 300;
 }
 
+.agent-tabs-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-primary);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.scratchpad-tab .agent-tab-name {
+  font-weight: 500;
+}
+
+.scratchpad-view {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make CodeMirror fill full height in scratchpad */
+.scratchpad-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.scratchpad-editor .cm-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.scratchpad-editor .cm-scroller {
+  flex: 1;
+}
+
+.scratchpad-editor .cm-content {
+  flex: 1;
+  min-height: 100%;
+  padding-bottom: 60vh !important; /* Allow clicking below content */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
+}
+
+.scratchpad-editor .cm-line {
+  font-family: inherit !important;
+}
+
 .agent-tabs-right {
   display: flex;
   align-items: center;

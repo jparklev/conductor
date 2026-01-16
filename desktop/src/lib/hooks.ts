@@ -53,6 +53,29 @@ export function useFileContent(home: string | undefined, wsId: string | null, pa
   });
 }
 
+// Hook for scratchpad
+export function useScratchpad(home: string | undefined, wsId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.scratchpad(home, wsId ?? ""),
+    queryFn: () => queryFns.getScratchpad(home, wsId!),
+    enabled: !!wsId,
+    staleTime: 0, // Always consider stale so we get fresh data
+    refetchOnMount: "always",
+  });
+}
+
+// Hook for saving scratchpad
+export function useSaveScratchpad(home?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ wsId, content }: { wsId: string; content: string }) =>
+      queryFns.saveScratchpad(home, wsId, content),
+    onSuccess: (_, { wsId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.scratchpad(home, wsId) });
+    },
+  });
+}
+
 // Hook for adding repo
 export function useAddRepo(home?: string) {
   const queryClient = useQueryClient();

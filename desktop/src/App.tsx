@@ -21,9 +21,11 @@ import {
   useChat,
   useUpsertResumeId,
   useAppendChat,
+  useScratchpad,
 } from "./lib/hooks";
 import { parseChatMd } from "./lib/chat-parser";
 import { Terminal } from "./components/Terminal";
+import { Scratchpad } from "./components/Scratchpad";
 import { queryKeys } from "./lib/query";
 
 // Play a gentle bell notification sound when agent completes
@@ -694,14 +696,18 @@ function WorkspacePanel({ activeWorkspace }: { activeWorkspace: Workspace | null
 
 function ChatPanel({
   activeWorkspace, tabs, activeTabId, chatDraft, running, startTime, files,
-  onTabChange, onTabClose, onTabAdd, onAgentChange, onDraftChange, onSend, onStop, chatEndRef,
+  showScratchpad, home,
+  onTabChange, onTabClose, onTabAdd, onAgentChange, onDraftChange, onSend, onStop,
+  onToggleScratchpad, chatEndRef,
 }: {
   activeWorkspace: Workspace | null;
   tabs: AgentTab[]; activeTabId: string | null; chatDraft: string; running: boolean;
   startTime?: number; files: string[];
+  showScratchpad: boolean; home?: string;
   onTabChange: (id: string) => void; onTabClose: (id: string) => void;
   onTabAdd: () => void; onAgentChange: (id: string) => void;
   onDraftChange: (v: string) => void; onSend: () => void; onStop: () => void;
+  onToggleScratchpad: () => void;
   chatEndRef: { current: HTMLDivElement | null };
 }) {
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
@@ -712,9 +718,17 @@ function ChatPanel({
     <div className="panel-card chat">
       <div className="agent-tabs">
         <div className="agent-tabs-list">
+          {/* Scratchpad tab - permanent, always first */}
+          <div className={`agent-tab scratchpad-tab${showScratchpad ? " active" : ""}`}>
+            <button className="agent-tab-btn" onClick={onToggleScratchpad}>
+              <span className="agent-tab-name">📝 Scratchpad</span>
+            </button>
+          </div>
+          <div className="agent-tabs-divider" />
+          {/* Agent tabs */}
           {tabs.map((tab) => {
             const agent = AGENTS.find((a) => a.id === tab.agentId) ?? AGENTS[0];
-            const isActive = tab.id === activeTabId;
+            const isActive = tab.id === activeTabId && !showScratchpad;
             return (
               <div key={tab.id} className={`agent-tab${isActive ? " active" : ""}${tab.running ? " running" : ""}`}>
                 <button className="agent-tab-btn" onClick={() => onTabChange(tab.id)}>
@@ -736,43 +750,55 @@ function ChatPanel({
         </div>
       </div>
 
-      <div className="chat-body">
-        {activeTab && activeTab.messages.length ? (
-          activeTab.messages.map((msg) => {
-            if (msg.role === "action") {
-              return <ActionMessage key={msg.id} msg={msg} workspacePath={activeWorkspace?.path} />;
-            }
-            return (
-              <div key={msg.id} className={`chat-message ${msg.role}${msg.meta === "queued" ? " queued" : ""}`}>
-                <span className="chat-meta">{msg.meta === "queued" ? "you" : msg.meta}</span>
-                <span className="chat-content">{msg.content}</span>
-              </div>
-            );
-          })
-        ) : (
-          <div className="muted">Send a message to start</div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      <div className="chat-input">
-        <div className="chat-input-row">
-          <select className="agent-picker" value={activeTab?.agentId ?? "claude-code"}
-            onChange={(e) => onAgentChange(e.currentTarget.value)} disabled={!activeWorkspace || !activeTab || running}>
-            {AGENTS.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
-          </select>
-          <ChatInput
-            value={chatDraft}
-            onChange={onDraftChange}
-            onSend={onSend}
-            onStop={onStop}
-            placeholder={!activeWorkspace ? "Select workspace" : `Message ${activeAgent.name}... (@ for files)`}
-            disabled={!activeWorkspace || !activeTab}
-            running={running}
-            files={files}
-          />
+      {showScratchpad ? (
+        <div className="scratchpad-view" style={{ flex: 1, overflow: "hidden" }}>
+          {activeWorkspace ? (
+            <Scratchpad home={home} workspaceId={activeWorkspace.id} />
+          ) : (
+            <div className="muted" style={{ padding: 16 }}>Select a workspace to use the scratchpad</div>
+          )}
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="chat-body">
+            {activeTab && activeTab.messages.length ? (
+              activeTab.messages.map((msg) => {
+                if (msg.role === "action") {
+                  return <ActionMessage key={msg.id} msg={msg} workspacePath={activeWorkspace?.path} />;
+                }
+                return (
+                  <div key={msg.id} className={`chat-message ${msg.role}${msg.meta === "queued" ? " queued" : ""}`}>
+                    <span className="chat-meta">{msg.meta === "queued" ? "you" : msg.meta}</span>
+                    <span className="chat-content">{msg.content}</span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="muted">Send a message to start</div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="chat-input">
+            <div className="chat-input-row">
+              <select className="agent-picker" value={activeTab?.agentId ?? "claude-code"}
+                onChange={(e) => onAgentChange(e.currentTarget.value)} disabled={!activeWorkspace || !activeTab || running}>
+                {AGENTS.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+              </select>
+              <ChatInput
+                value={chatDraft}
+                onChange={onDraftChange}
+                onSend={onSend}
+                onStop={onStop}
+                placeholder={!activeWorkspace ? "Select workspace" : `Message ${activeAgent.name}... (@ for files)`}
+                disabled={!activeWorkspace || !activeTab}
+                running={running}
+                files={files}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -951,6 +977,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filesWidth, setFilesWidth] = useState(360);
   const [filesCollapsed, setFilesCollapsed] = useState(false);
+  const [showScratchpad, setShowScratchpad] = useState(false);
   const [showHomePopover, setShowHomePopover] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
@@ -994,6 +1021,7 @@ function App() {
   // Session persistence hooks
   const { data: sessionState } = useSession(activeWorkspace?.path ?? null);
   const { data: chatHistory } = useChat(activeWorkspace?.path ?? null);
+  const { data: scratchpadContent } = useScratchpad(home || undefined, activeWorkspaceId);
   const upsertResumeIdMutation = useUpsertResumeId();
   const appendChatMutation = useAppendChat();
 
@@ -1236,13 +1264,18 @@ function App() {
       appendChatMutation.mutate({ wsPath: activeWorkspace.path, role: "User", content: trimmed });
     }
 
+    let promptToSend = trimmed;
+    if (promptToSend.includes("@scratchpad") && scratchpadContent) {
+      promptToSend = promptToSend.replace(/@scratchpad/g, `scratchpad (Content below)\n\n<scratchpad>\n${scratchpadContent}\n</scratchpad>`);
+    }
+
     const sessionId = `${activeWorkspaceId}-${activeTabId}-${Date.now()}`;
     agentSessionRef.current = { wsId: activeWorkspaceId, tabId: activeTabId, sessionId, startTime: Date.now() };
 
     try {
       await invoke("run_agent", {
         engine: currentTab.agentId,
-        prompt: trimmed,
+        prompt: promptToSend,
         cwd: activeWorkspace.path,
         sessionId,
         resumeId: currentTab.resumeId ?? null, // Pass resume ID for session continuity
@@ -1551,10 +1584,14 @@ function App() {
               <WorkspacePanel activeWorkspace={activeWorkspace} />
               <ChatPanel
                 activeWorkspace={activeWorkspace} tabs={agentTabs} activeTabId={activeTabId}
-                chatDraft={chatDraft} running={running} startTime={activeTab?.startTime} files={files}
-                onTabChange={setActiveTabId} onTabClose={closeAgentTab} onTabAdd={addAgentTab}
+                chatDraft={chatDraft} running={running} startTime={activeTab?.startTime}
+                files={["scratchpad", ...files]}
+                showScratchpad={showScratchpad} home={home || undefined}
+                onTabChange={(id) => { setShowScratchpad(false); setActiveTabId(id); }}
+                onTabClose={closeAgentTab} onTabAdd={addAgentTab}
                 onAgentChange={changeTabAgent} onDraftChange={setChatDraft}
                 onSend={() => void sendChat()} onStop={() => void stopAgent()}
+                onToggleScratchpad={() => setShowScratchpad(true)}
                 chatEndRef={chatEndRef}
               />
               {/* Terminal toggle and panel */}

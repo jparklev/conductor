@@ -295,6 +295,36 @@ async fn workspace_file_diff(
 }
 
 #[tauri::command]
+async fn get_scratchpad(_home: Option<String>, workspace: String) -> Result<String, String> {
+    let mut client = client::get_client().await?;
+    let response = client
+        .get_scratchpad(proto::GetScratchpadRequest {
+            workspace_id: workspace,
+        })
+        .await
+        .map_err(map_err)?;
+
+    Ok(response.into_inner().content)
+}
+
+#[tauri::command]
+async fn save_scratchpad(
+    _home: Option<String>,
+    workspace: String,
+    content: String,
+) -> Result<(), String> {
+    let mut client = client::get_client().await?;
+    client
+        .set_scratchpad(proto::SetScratchpadRequest {
+            workspace_id: workspace,
+            content,
+        })
+        .await
+        .map_err(map_err)?;
+    Ok(())
+}
+
+#[tauri::command]
 fn resolve_home_path(_home: Option<String>) -> Result<String, String> {
     Ok(conductor_core::default_home().to_string_lossy().to_string())
 }
@@ -733,6 +763,8 @@ pub fn run() {
             workspace_changes,
             workspace_file_content,
             workspace_file_diff,
+            get_scratchpad,
+            save_scratchpad,
             resolve_home_path,
             run_agent,
             stop_agent,

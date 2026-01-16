@@ -19,6 +19,8 @@ service Conductor {
   rpc GetWorkspaceChanges(GetWorkspaceChangesRequest) returns (GetWorkspaceChangesResponse);
   rpc GetFileContent(GetFileContentRequest) returns (GetFileContentResponse);
   rpc GetFileDiff(GetFileDiffRequest) returns (GetFileDiffResponse);
+  rpc GetScratchpad(GetScratchpadRequest) returns (GetScratchpadResponse);
+  rpc SetScratchpad(SetScratchpadRequest) returns (SetScratchpadResponse);
 
   // Session management
   rpc GetSession(GetSessionRequest) returns (SessionState);
@@ -147,6 +149,23 @@ message GetFileDiffRequest {
 
 message GetFileDiffResponse {
   string diff = 1;
+}
+
+message GetScratchpadRequest {
+  string workspace_id = 1;
+}
+
+message GetScratchpadResponse {
+  string content = 1;
+}
+
+message SetScratchpadRequest {
+  string workspace_id = 1;
+  string content = 2;
+}
+
+message SetScratchpadResponse {
+  bool success = 1;
 }
 
 // ============ Session Types ============

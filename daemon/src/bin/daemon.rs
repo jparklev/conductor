@@ -303,6 +303,34 @@ impl Conductor for ConductorService {
         Ok(Response::new(GetFileDiffResponse { diff }))
     }
 
+    async fn get_scratchpad(
+        &self,
+        request: Request<GetScratchpadRequest>,
+    ) -> Result<Response<GetScratchpadResponse>, Status> {
+        let req = request.into_inner();
+        let workspace_id = req.workspace_id;
+
+        let content = self
+            .with_db(move |conn| Ok(core::scratchpad_read(&conn, &workspace_id)?))
+            .await?;
+
+        Ok(Response::new(GetScratchpadResponse { content }))
+    }
+
+    async fn set_scratchpad(
+        &self,
+        request: Request<SetScratchpadRequest>,
+    ) -> Result<Response<SetScratchpadResponse>, Status> {
+        let req = request.into_inner();
+        let workspace_id = req.workspace_id;
+        let content = req.content;
+
+        self.with_db(move |conn| Ok(core::scratchpad_write(&conn, &workspace_id, &content)?))
+            .await?;
+
+        Ok(Response::new(SetScratchpadResponse { success: true }))
+    }
+
     // =========================================================================
     // Session Management
     // =========================================================================

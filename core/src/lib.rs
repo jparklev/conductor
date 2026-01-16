@@ -13,7 +13,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use chrono::Utc;
 
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 const CITIES: &[&str] = &[
     "almaty",
@@ -340,6 +340,23 @@ pub fn migrate(conn: &mut Connection) -> Result<()> {
             CREATE UNIQUE INDEX IF NOT EXISTS idx_workspaces_repo_branch ON workspaces(repository_id, branch);
 
             PRAGMA user_version = 3;
+            ",
+        ))?;
+        db(tx.commit())?;
+        return Ok(());
+    }
+
+    if version == 3 {
+        db(tx.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS scratchpads (
+                workspace_id TEXT PRIMARY KEY,
+                content TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+            );
+
+            PRAGMA user_version = 4;
             ",
         ))?;
         db(tx.commit())?;
@@ -1097,6 +1114,25 @@ pub fn session_upsert_resume_id(ws_path: &Path, agent_id: &str, resume_id: &str)
     };
     session_write(ws_path, &session)?;
     Ok(session)
+}
+
+// =============================================================================
+// Scratchpad
+// =============================================================================
+
+pub fn scratchpad_read(conn: &Connection, ws_id: &str) -> Result<String> {
+    let mut stmt = db(conn.prepare("SELECT content FROM scratchpads WHERE workspace_id = ?"))?;
+    let content: Option<String> = db(stmt.query_row([ws_id], |row| row.get(0)).optional())?;
+    Ok(content.unwrap_or_default())
+}
+
+pub fn scratchpad_write(conn: &Connection, ws_id: &str, content: &str) -> Result<()> {
+    db(conn.execute(
+        "INSERT INTO scratchpads (workspace_id, content, updated_at) VALUES (?, ?, datetime('now'))
+         ON CONFLICT(workspace_id) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at",
+        params![ws_id, content],
+    ))?;
+    Ok(())
 }
 
 // =============================================================================

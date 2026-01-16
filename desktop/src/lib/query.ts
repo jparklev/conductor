@@ -26,6 +26,7 @@ export const queryKeys = {
   workspaceChanges: (home: string | undefined, wsId: string) => ["workspace-changes", home, wsId] as const,
   workspaceFileDiff: (home: string | undefined, wsId: string, path: string) => ["workspace-file-diff", home, wsId, path] as const,
   workspaceFileContent: (home: string | undefined, wsId: string, path: string) => ["workspace-file-content", home, wsId, path] as const,
+  scratchpad: (home: string | undefined, wsId: string) => ["scratchpad", home, wsId] as const,
   session: (wsPath: string) => ["session", wsPath] as const,
   chat: (wsPath: string) => ["chat", wsPath] as const,
 };
@@ -49,6 +50,12 @@ export const queryFns = {
 
   workspaceFileContent: (home: string | undefined, wsId: string, path: string) =>
     tauriInvoke<string>("workspace_file_content", { ...(home ? { home } : {}), workspace: wsId, path }),
+
+  getScratchpad: (home: string | undefined, wsId: string) =>
+    tauriInvoke<string>("get_scratchpad", { ...(home ? { home } : {}), workspace: wsId }),
+
+  saveScratchpad: (home: string | undefined, wsId: string, content: string) =>
+    tauriInvoke<void>("save_scratchpad", { ...(home ? { home } : {}), workspace: wsId, content }),
 
   resolveHome: (path: string) =>
     tauriInvoke<string>("resolve_home_path", path ? { home: path } : {}),
